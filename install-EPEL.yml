@@ -1,0 +1,41 @@
+---
+# install_epel.yml - Ansible playbook to install EPEL repository on RHEL 9 systems
+
+- name: Install EPEL repository on RHEL 9
+  hosts: all
+  become: true
+  tasks:
+    - name: Check if RHEL 9
+      ansible.builtin.assert:
+        that:
+          - ansible_distribution == 'RedHat' 
+          - ansible_distribution_major_version == '9'
+        msg: "This playbook is designed for RHEL 9 systems only"
+
+    - name: Install EPEL release package
+      ansible.builtin.dnf:
+        name: "https://dl.fedoraproject.org/pub/epel/epel-release-latest-9.noarch.rpm"
+        state: present
+        disable_gpg_check: false
+
+    - name: Enable EPEL repository
+      ansible.builtin.command: 
+        cmd: dnf config-manager --set-enabled epel
+      register: enable_result
+      changed_when: enable_result.rc == 0
+      failed_when: enable_result.rc != 0
+
+    - name: Clean DNF cache
+      ansible.builtin.dnf:
+        update_cache: yes
+
+    - name: Verify EPEL repository is installed and enabled
+      ansible.builtin.command:
+        cmd: dnf repolist | grep epel
+      register: repo_check
+      changed_when: false
+      failed_when: repo_check.rc != 0
+
+    - name: Show success message
+      ansible.builtin.debug:
+        msg: "EPEL repository has been successfully installed and enabled on RHEL 9"
